@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17  
 **Environment:** Development (MariaDB)  
-**Test Results:** 26 tests | 26 PASSED
+**Test Results:** 29 tests | 29 PASSED
 
 ---
 
@@ -75,7 +75,18 @@
 | Password Complexity | 4 | 4 | 0 | 100% |
 | JWT Token | 6 | 6 | 0 | 100% |
 | Security | 3 | 3 | 0 | 100% |
-| **Total** | **26** | **26** | **0** | **100%** |
+| Rate Limiting | 3 | 3 | 0 | 100% |
+| **Total** | **29** | **29** | **0** | **100%** |
+
+---
+
+## Rate Limiting Tests
+
+| TC ID | Test Case | Expected | Actual | Status |
+|-------|-----------|----------|--------|--------|
+| TC-RATE-001 | Allow requests within limit | 200 or 429 | 200 or 429 | ✅ PASS |
+| TC-RATE-002 | Include rate limit info | Headers present | Headers present | ✅ PASS |
+| TC-RATE-003 | Block requests exceeding limit | 429 | 429 | ✅ PASS |
 
 ---
 
@@ -93,6 +104,6 @@
 - [x] Add password complexity validation tests ✅
 - [x] Add JWT token validation tests ✅
 - [x] Add SQL injection prevention tests ✅
-- [ ] Add rate limiting tests
+- [x] Add rate limiting tests ✅
 - [ ] Add frontend tests (React Testing Library)
 - [ ] Add integration tests (E2E with Playwright)
