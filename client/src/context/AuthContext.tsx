@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { authApi, User, LoginInput, RegisterInput } from '../services/api'
+import { authApi, setAccessToken, getAccessToken, User, LoginInput, RegisterInput } from '../services/api'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   login: (data: LoginInput) => Promise<void>
   register: (data: RegisterInput) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -17,42 +17,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-    if (token) {
+    let isMounted = true
+    
+    // First try to restore from localStorage (instant, no API)
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch {
+        localStorage.removeItem('user')
+      }
+    }
+    
+    // Then verify session with server - but only if we have a token
+    if (getAccessToken()) {
       authApi.me()
-        .then((res) => setUser(res.data))
-        .catch(() => {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
+        .then((res) => {
+          if (isMounted) {
+            setUser(res.data)
+            localStorage.setItem('user', JSON.stringify(res.data))
+          }
         })
-        .finally(() => setIsLoading(false))
+        .catch(() => {
+          if (isMounted) {
+            setUser(null)
+            localStorage.removeItem('user')
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false)
+        })
     } else {
+      // No token - user needs to login
       setIsLoading(false)
+    }
+    
+    return () => {
+      isMounted = false
     }
   }, [])
 
   const login = async (data: LoginInput) => {
     const response = await authApi.login(data)
-    const { user, accessToken, refreshToken } = response.data
+    const { user: userData, accessToken } = response.data
     
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    setUser(user)
+    setAccessToken(accessToken)
+    localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
   }
 
   const register = async (data: RegisterInput) => {
     const response = await authApi.register(data)
-    const { user, accessToken, refreshToken } = response.data
+    const { user: userData, accessToken } = response.data
     
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    setUser(user)
+    setAccessToken(accessToken)
+    localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
   }
 
-  const logout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    setUser(null)
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // Ignore
+    } finally {
+      setAccessToken(null)
+      localStorage.removeItem('user')
+      setUser(null)
+    }
   }
 
   return (

@@ -1,50 +1,95 @@
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
+// Separate axios instance for refresh - NO interceptors to avoid infinite loop
+const refreshAxios = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+})
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 })
 
-// Add token to requests
+// Access token in memory only
+let accessToken: string | null = null
+
+export const setAccessToken = (token: string | null) => {
+  accessToken = token
+}
+
+export const getAccessToken = () => accessToken
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`
   }
   return config
 })
 
-// Handle token refresh
+let isRefreshing = false
+let refreshSubscribers: Array<(token: string) => void> = []
+
+const subscribeTokenRefresh = (cb: (token: string) => void) => {
+  refreshSubscribers.push(cb)
+}
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach(cb => cb(token))
+  refreshSubscribers = []
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
     
+    // Skip refresh for auth endpoints to avoid loop
+    if (originalRequest.url?.includes('/auth/')) {
+      return Promise.reject(error)
+    }
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (refreshToken) {
+      if (!isRefreshing) {
+        isRefreshing = true
+        originalRequest._retry = true
+        
         try {
-          const response = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`, {
-            refreshToken,
-          })
+          // Use refreshAxios (no interceptor) to avoid infinite loop
+          const response = await refreshAxios.post('/auth/refresh', {})
+          const { accessToken: newAccessToken } = response.data
           
-          const { accessToken, refreshToken: newRefreshToken } = response.data
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', newRefreshToken)
+          setAccessToken(newAccessToken)
+          onTokenRefreshed(newAccessToken)
           
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
           return api(originalRequest)
-        } catch {
-          // Refresh failed, logout
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          window.location.href = '/login'
+        } catch (refreshError) {
+          // Refresh failed - clear everything
+          setAccessToken(null)
+          localStorage.removeItem('user')
+          // Only redirect if not already on login page
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login'
+          }
+          return Promise.reject(refreshError)
+        } finally {
+          isRefreshing = false
         }
       }
+      
+      // Queue this request
+      return new Promise((resolve) => {
+        subscribeTokenRefresh((token: string) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`
+          resolve(api(originalRequest))
+        })
+      })
     }
     
     return Promise.reject(error)
@@ -63,12 +108,6 @@ export interface RegisterInput {
   tenantName?: string
 }
 
-export interface AuthResponse {
-  user: User
-  accessToken: string
-  refreshToken: string
-}
-
 export interface User {
   id: string
   email: string
@@ -83,9 +122,10 @@ export interface User {
 }
 
 export const authApi = {
-  login: (data: LoginInput) => api.post<AuthResponse>('/auth/login', data),
-  register: (data: RegisterInput) => api.post<AuthResponse>('/auth/register', data),
+  login: (data: LoginInput) => api.post('/auth/login', data),
+  register: (data: RegisterInput) => api.post('/auth/register', data),
   me: () => api.get<User>('/auth/me'),
+  logout: () => api.post('/auth/logout', {}),
 }
 
 export default api
