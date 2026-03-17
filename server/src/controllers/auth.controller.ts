@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express'
 import { login, register, refreshTokens, getCurrentUser } from '../services/auth.service.js'
 import { loginSchema, registerSchema } from '../services/auth.service.js'
 import { AuthRequest } from '../middlewares/auth.js'
+import { validateEmail } from '../utils/validation.js'
 
 export async function loginHandler(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -24,6 +25,13 @@ export async function loginHandler(req: AuthRequest, res: Response, next: NextFu
 
 export async function registerHandler(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    // Validate email format before Zod validation
+    const { email } = req.body
+    const emailCheck = validateEmail(email)
+    if (!emailCheck.valid) {
+      return res.status(400).json({ error: emailCheck.error })
+    }
+    
     const input = registerSchema.parse(req.body)
     const result = await register(input)
     res.status(201).json(result)
