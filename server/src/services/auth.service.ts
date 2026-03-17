@@ -13,7 +13,14 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8).max(100),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(100)
+    .refine((p) => /[A-Z]/.test(p), 'Password must contain at least one uppercase letter')
+    .refine((p) => /[a-z]/.test(p), 'Password must contain at least one lowercase letter')
+    .refine((p) => /[0-9]/.test(p), 'Password must contain at least one number')
+    .refine((p) => /[!@#$%^&*]/.test(p), 'Password must contain at least one special character (!@#$%^&*)'),
   name: z.string().min(1).max(100),
   tenantName: z.string().min(1).max(100).optional(),
 })

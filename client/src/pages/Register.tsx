@@ -2,6 +2,14 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+const passwordRequirements = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'One number (0-9)', test: (p: string) => /[0-9]/.test(p) },
+  { label: 'One special character (!@#$%^&*)', test: (p: string) => /[!@#$%^&*]/.test(p) },
+]
+
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
@@ -24,8 +32,10 @@ export default function Register() {
       return
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
+    // Validate password before submit
+    const allRequirementsMet = passwordRequirements.every((req) => req.test(formData.password))
+    if (!allRequirementsMet) {
+      setError('Please meet all password requirements')
       return
     }
 
@@ -104,8 +114,25 @@ export default function Register() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
               style={styles.input}
-              placeholder="Min 8 characters"
+              placeholder="••••••••"
+              autoComplete="new-password"
             />
+            <div style={styles.passwordRequirements}>
+              {passwordRequirements.map((req, index) => (
+                <div
+                  key={index}
+                  style={{
+                    ...styles.requirement,
+                    color: req.test(formData.password) ? '#10b981' : '#9ca3af',
+                  }}
+                >
+                  <span style={{ marginRight: '6px' }}>
+                    {req.test(formData.password) ? '✓' : '○'}
+                  </span>
+                  {req.label}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div style={styles.field}>
@@ -116,9 +143,16 @@ export default function Register() {
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
-              style={styles.input}
+              style={{
+                ...styles.input,
+                borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : '#d1d5db',
+              }}
               placeholder="••••••••"
+              autoComplete="new-password"
             />
+            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+              <span style={styles.passwordMismatch}>Passwords do not match</span>
+            )}
           </div>
 
           <button
@@ -152,7 +186,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   card: {
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '420px',
     padding: '2rem',
     background: 'white',
     borderRadius: '0.5rem',
@@ -199,6 +233,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     outline: 'none',
     transition: 'border-color 0.15s',
+  },
+  passwordRequirements: {
+    marginTop: '0.5rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  requirement: {
+    fontSize: '0.75rem',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  passwordMismatch: {
+    fontSize: '0.75rem',
+    color: '#ef4444',
+    marginTop: '0.25rem',
   },
   button: {
     padding: '0.625rem 1rem',
