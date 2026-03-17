@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { login } = useAuth()
@@ -44,20 +45,31 @@ export default function Login() {
               required
               style={styles.input}
               placeholder="you@example.com"
+              autoComplete="email"
             />
           </div>
 
           <div style={styles.field}>
             <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={styles.input}
-              placeholder="••••••••"
-            />
+            <div style={styles.passwordWrapper}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.toggleButton}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <button
@@ -138,6 +150,31 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     outline: 'none',
     transition: 'border-color 0.15s',
+    width: '100%',
+  },
+  passwordWrapper: {
+    position: 'relative',
+    display: 'flex',
+  },
+  passwordInput: {
+    padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+    border: '1px solid #d1d5db',
+    borderRadius: '0.375rem',
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+    width: '100%',
+  },
+  toggleButton: {
+    position: 'absolute',
+    right: '0.5rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    padding: '0.25rem',
   },
   button: {
     padding: '0.625rem 1rem',

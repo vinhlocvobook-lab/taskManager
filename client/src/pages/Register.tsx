@@ -18,6 +18,8 @@ export default function Register() {
     confirmPassword: '',
     tenantName: '',
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register } = useAuth()
@@ -107,16 +109,25 @@ export default function Register() {
 
           <div style={styles.field}>
             <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              style={styles.input}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
+            <div style={styles.passwordWrapper}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.toggleButton}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             <div style={styles.passwordRequirements}>
               {passwordRequirements.map((req, index) => (
                 <div
@@ -137,19 +148,28 @@ export default function Register() {
 
           <div style={styles.field}>
             <label htmlFor="confirmPassword" style={styles.label}>Confirm Password</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              required
-              style={{
-                ...styles.input,
-                borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : '#d1d5db',
-              }}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
+            <div style={styles.passwordWrapper}>
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                required
+                style={{
+                  ...styles.passwordInput,
+                  borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : '#d1d5db',
+                }}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.toggleButton}
+              >
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             {formData.confirmPassword && formData.password !== formData.confirmPassword && (
               <span style={styles.passwordMismatch}>Passwords do not match</span>
             )}
@@ -233,6 +253,31 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     outline: 'none',
     transition: 'border-color 0.15s',
+    width: '100%',
+  },
+  passwordWrapper: {
+    position: 'relative',
+    display: 'flex',
+  },
+  passwordInput: {
+    padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+    border: '1px solid #d1d5db',
+    borderRadius: '0.375rem',
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+    width: '100%',
+  },
+  toggleButton: {
+    position: 'absolute',
+    right: '0.5rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    padding: '0.25rem',
   },
   passwordRequirements: {
     marginTop: '0.5rem',
