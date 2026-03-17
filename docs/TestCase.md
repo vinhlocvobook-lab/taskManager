@@ -16,6 +16,21 @@
 | TC-REG-004 | Register with missing password | 400 Bad Request | 400 Bad Request | ✅ PASS |
 | TC-REG-005 | Register with short password (< 8 chars) | 400 Bad Request | 400 Bad Request | ✅ PASS |
 | TC-REG-006 | Register with no uppercase letter | 400 Bad Request | 400 Bad Request | ✅ PASS |
+| TC-REG-007 | Register with invalid email format | 400/500 Error | Stored as-is (no validation) | ⚠️ NOTE |
+
+### TC-REG-007 Note
+Currently the test server doesn't validate email format at API layer. Production should use Zod middleware:
+```typescript
+// Recommended: Add to auth.controller.ts
+import { validateEmail } from '../utils/validation'
+
+const emailCheck = validateEmail(email)
+if (!emailCheck.valid) {
+  return res.status(400).json({ error: emailCheck.error })
+}
+```
+
+**Validation utility already available:** `server/src/utils/validation.ts`
 
 ---
 
