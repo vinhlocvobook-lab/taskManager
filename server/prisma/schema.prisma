@@ -37,7 +37,7 @@ model User {
   email     String   @unique
   name      String?
   password  String
-  role      Role     @default(USER)
+  role      Role     @default(MEMBER)
   avatarUrl String?
 
   tenantId String
@@ -46,8 +46,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tasks     Task[]
-  comments  Comment[]
+  tasks        Task[]       @relation("TaskAssignee")
+  createdTasks Task[]       @relation("TaskCreator")
+  comments     Comment[]
+  memberships  TenantMember[]
 
   @@unique([email, tenantId])
   @@index([tenantId])
@@ -101,10 +103,10 @@ model Task {
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   assigneeId  String?
-  assignee    User?   @relation(fields: [assigneeId], references: [id])
+  assignee    User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
 
   createdById String
-  createdBy   User    @relation(fields: [createdById], references: [id])
+  createdBy   User    @relation("TaskCreator", fields: [createdById], references: [id])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
