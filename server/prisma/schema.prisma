@@ -1,0 +1,149 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenant support: Each tenant has isolated data
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique // For subdomain: acme.taskapp.com
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  tasks    Task[]
+  members  TenantMember[]
+
+  @@map("tenants")
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  avatarUrl String?
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks     Task[]
+  comments  Comment[]
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// Team members with invitation support
+model TenantMember {
+  id        String        @id @default(uuid())
+  email     String
+  role      Role
+  status    MemberStatus @default(PENDING)
+  token     String?       // For email invitation
+
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@map("tenant_members")
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+}
+
+model Task {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  priority    Priority    @default(MEDIUM)
+  status      TaskStatus  @default(TODO)
+  dueDate     DateTime?
+
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  assigneeId  String?
+  assignee    User?   @relation(fields: [assigneeId], references: [id])
+
+  createdById String
+  createdBy   User    @relation(fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  comments    Comment[]
+
+  @@index([tenantId])
+  @@index([assigneeId])
+  @@index([status])
+  @@map("tasks")
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+
+  taskId    String
+  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  authorId  String
+  author    User   @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@map("comments")
+}
